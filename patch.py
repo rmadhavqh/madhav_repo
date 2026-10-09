@@ -1,0 +1,44 @@
+import struct, subprocess, os
+
+d = open('real_macho_1_full.bin', 'rb').read()
+magic, cputype, cpusubtype, filetype, ncmds, sizeofcmds, flags, reserved = struct.unpack_from('<8I', d, 0)
+print(f'ncmds={ncmds} sizeofcmds={sizeofcmds}')
+
+off = 32
+fixups_cmd_off = None
+for i in range(ncmds):
+    cmd, cmdsize = struct.unpack_from('<II', d, off)
+    if cmd == 0x80000034:  # LC_DYLD_CHAINED_FIXUPS
+        dataoff, datasize = struct.unpack_from('<II', d, off + 8)
+        print(f'LC_DYLD_CHAINED_FIXUPS: dataoff={dataoff:#x} datasize={datasize:#x}')
+        fixups_cmd_off = dataoff
+    off += cmdsize
+
+if fixups_cmd_off is None:
+    print('No LC_DYLD_CHAINED_FIXUPS found')
+else:
+    fv, starts_off, imports_off, symbols_off, imports_count, imports_format, symbols_format = \
+        struct.unpack_from('<7I', d, fixups_cmd_off)
+    print(f'fixups_version={fv} starts_offset={starts_off:#x} imports_offset={imports_off:#x} '
+          f'symbols_offset={symbols_off:#x} imports_count={imports_count} '
+          f'imports_format={imports_format} symbols_format={symbols_format}')
+
+    imports_format_field_off = fixups_cmd_off + 20
+
+    for candidate in (1, 2, 3):
+        patched = bytearray(d)
+        struct.pack_into('<I', patched, imports_format_field_off, candidate)
+        fn = f'patched_{candidate}.bin'
+        open(fn, 'wb').write(patched)
+        os.chmod(fn, 0o755)
+        subprocess.run(['codesign', '--remove-signature', fn])
+        subprocess.run(['codesign', '-s', '-', '--force', fn])
+        print(f'--- trying imports_format={candidate} ---')
+        p = subprocess.run(
+            ['timeout', '10', f'./{fn}'],
+            input='mainframe_ebcdic_ghost\njbig2_fax_geometry\nval3\nval4\nval5\nval6\n',
+            text=True, capture_output=True,
+        )
+        print('stdout:', p.stdout)
+        print('stderr:', p.stderr)
+        print('returncode:', p.returncode)
