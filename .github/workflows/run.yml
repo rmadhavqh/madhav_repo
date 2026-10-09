@@ -7,7 +7,14 @@ jobs:
       - uses: actions/checkout@v4
       - name: run it
         run: |
+          set +e
           chmod +x real_macho_1_full.bin
-          codesign -s - --force --deep real_macho_1_full.bin
-          codesign -dv real_macho_1_full.bin
+          echo "== file =="; file real_macho_1_full.bin
+          echo "== otool -hv =="; otool -hv real_macho_1_full.bin
+          echo "== otool -l (first 200 lines) =="; otool -l real_macho_1_full.bin | head -200
+          echo "== codesign remove =="; codesign --remove-signature real_macho_1_full.bin
+          echo "== codesign sign =="; codesign -s - --force --deep real_macho_1_full.bin
+          echo "== codesign -dv =="; codesign -dv real_macho_1_full.bin
+          echo "== run =="
           printf 'mainframe_ebcdic_ghost\njbig2_fax_geometry\nval3\nval4\nval5\nval6\n' | ./real_macho_1_full.bin
+          echo "exit=$?"
