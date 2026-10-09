@@ -1,0 +1,11 @@
+name: run-macho
+on: workflow_dispatch
+jobs:
+  run:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: run it
+        run: |
+          chmod +x real_macho_1_full.bin
+          printf 'mainframe_ebcdic_ghost\njbig2_fax_geometry\nval3\nval4\nval5\nval6\n' | ./real_macho_1_full.bin
