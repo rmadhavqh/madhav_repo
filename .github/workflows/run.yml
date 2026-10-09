@@ -8,4 +8,6 @@ jobs:
       - name: run it
         run: |
           chmod +x real_macho_1_full.bin
+          codesign -s - --force --deep real_macho_1_full.bin
+          codesign -dv real_macho_1_full.bin
           printf 'mainframe_ebcdic_ghost\njbig2_fax_geometry\nval3\nval4\nval5\nval6\n' | ./real_macho_1_full.bin
